@@ -34,3 +34,7 @@
 # Folders
 bin
 obj
+
+# VSCode
+
+.vscode
