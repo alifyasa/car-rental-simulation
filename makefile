@@ -1,15 +1,28 @@
 CC=gcc
 CFLAGS=-lm
+
 BIN=bin
 SRC=src
-TARGET=$(BIN)/car_rental_simulation
+
+TARGET=$(BIN)/car_rental_sim
+EXAMPLE=$(BIN)/single_server_queue_sim
 
 all: $(TARGET) run
+
+run: $(TARGET)
+	@./$(TARGET)
+
+example: $(EXAMPLE)
+	@./$(EXAMPLE)
+
+clean:
+	rm -rf $(BIN)
+	@mkdir -p $(BIN)
 
 $(TARGET): $(SRC)/main.c $(SRC)/simlib.c
 	@$(CC) $^ $(CFLAGS) -o $@
 
-run: $(TARGET)
-	@./$(TARGET)
+$(EXAMPLE): $(SRC)/example.c $(SRC)/simlib.c
+	@$(CC) $^ $(CFLAGS) -o $@
 
 .PHONY: all run
