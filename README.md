@@ -2,6 +2,6 @@
 
 Problem 2.38 from Simulation Modeling and Analysis 3rd Edition by Averill M Law.
 
-## Installing SIMLIB
+## How to Run
 
-Run `simlib-install.sh` script.
+Run `make`.
