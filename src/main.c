@@ -1,71 +1,269 @@
-#include "simlib.h"
+#include "main.h"
 
-#define EVENT_BUS_ARRIVAL_1     4
-#define EVENT_BUS_ARRIVAL_2     5
-#define EVENT_BUS_ARRIVAL_3     6
-#define EVENT_ARRIVAL_1         1
-#define EVENT_ARRIVAL_2         2
-#define EVENT_ARRIVAL_3         3
-#define STREAM_INTERARRIVAL_1   1
-#define STREAM_INTERARRIVAL_2   2
-#define STREAM_INTERARRIVAL_3   3
-#define INITIAL_BUS_LOCATION    0
+/* Parameters */
 
-FILE *inputfile, *outputfile;
-double mean_interarrival[4], min_load, max_load, min_unload, max_unload;
-double dest_prob[3];
-int simulation_time, bust_loc;
+double MEAN_INTERARRIVAL[4]; // 4 because assume indexing starts at 1
+double LOAD_TIME_MIN, LOAD_TIME_MAX;
+double UNLOAD_TIME_MIN, UNLOAD_TIME_MAX;
+double DESTINATION_PROBABILITIES[3];
+int TOTAL_SIMULATION_TIME;
 
-void init_schedule(){
-    list_rank[4] = 1;
 
-    bust_loc = INITIAL_BUS_LOCATION;
+/* Global Variables */
 
-    for(int i = 0; i<3; i++){
-        event_schedule(sim_time + expon(mean_interarrival[i+1], STREAM_INTERARRIVAL_1 + i), EVENT_ARRIVAL_1 + i);
-    }
+FILE *FILE_INPUT, *FILE_OUTPUT;
 
-    event_schedule(sim_time, EVENT_BUS_ARRIVAL_3);
+int CURR_BUS_LOCN;
+int NEXT_BUS_LOCN;
+
+double BUS_NEXT_DEPARTURE_TIME;
+
+// Map event to stream
+int EVNT_TO_STRM[] = {
+    -1, // index starts at 1
+    STRM_PERSON_ARRIVAL_AIR_TERMINAL_1,
+    STRM_PERSON_ARRIVAL_AIR_TERMINAL_2,
+    STRM_PERSON_ARRIVAL_CAR_RENTAL,
+    -1, // no stream for event bus arrival
+    STRM_BUS_UNLOAD,
+    STRM_BUS_LOAD
+};
+int LOCN_TO_LIST[] = {
+    -1,
+    LIST_AIR_TERMINAL_1,
+    LIST_AIR_TERMINAL_2,
+    LIST_CAR_RENTAL
+};
+double TIME_TO_NEXT_LOCN_FROM[] = {
+    -1.0,
+    1 / 30 * HOUR, // convert to minute
+    (0.5 + 3 + 1) / 30 * HOUR,
+    (1 + 3 + 0.5) / 30 * HOUR,
+};
+int NEXT_LOCATION_FROM[] = {
+    -1,
+    LOCN_AIR_TERMINAL_2,
+    LOCN_CAR_RENTAL,
+    LOCN_AIR_TERMINAL_1
+};
+
+void init_model()
+{
+    // Simulation end at max double time
+    event_schedule(__DBL_MAX__, EVNT_SIMULATION_END);
+
+    /**
+     * From the problem:
+     *   "Bus is initially at car terminal and leaves immediately"
+     * Hence bus starts by departing to air terminal 1
+     */
+    CURR_BUS_LOCN = LOCN_CAR_RENTAL;
+    NEXT_BUS_LOCN = LOCN_AIR_TERMINAL_1;
+    event_schedule(sim_time, EVNT_BUS_DEPARTURE);
+
+    // Initialize people arrival
+    event_schedule(
+        sim_time + expon(
+            MEAN_INTERARRIVAL[LOCN_AIR_TERMINAL_1], 
+            EVNT_TO_STRM[EVNT_PERSON_ARRIVAL_AIR_TERMINAL_1]
+        ),
+        EVNT_PERSON_ARRIVAL_AIR_TERMINAL_1);
+    event_schedule(
+        sim_time + expon(
+            MEAN_INTERARRIVAL[LOCN_AIR_TERMINAL_2], 
+            EVNT_TO_STRM[EVNT_PERSON_ARRIVAL_AIR_TERMINAL_2]
+        ),
+        EVNT_PERSON_ARRIVAL_AIR_TERMINAL_2);
+    event_schedule(
+        sim_time + expon(
+            MEAN_INTERARRIVAL[LOCN_CAR_RENTAL], 
+            EVNT_TO_STRM[EVNT_PERSON_ARRIVAL_CAR_RENTAL]
+        ),
+        EVNT_PERSON_ARRIVAL_CAR_RENTAL);
 }
 
-int main() {
-    inputfile = fopen("test/input/modsim.in", "r");
-    outputfile = fopen("test/output/modsim.out", "w");
-    fscanf(inputfile, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %d", &mean_interarrival[1], &mean_interarrival[2], &mean_interarrival[3], &min_unload, &max_unload, &min_load, &max_load, &dest_prob[1], &dest_prob[2], &simulation_time);
-    // char myString[] = "Hello, World!";
-    // printf("%s\n", myString);
-    init_simlib();
+/**
+ * Handle person arrival event.
+ * 
+ * List of locations are available at main.h.
+*/
+void person_arrival_at(int location, int event_type) {
+    event_schedule(
+        sim_time + expon(
+            MEAN_INTERARRIVAL[location],
+            EVNT_TO_STRM[event_type]
+        ),
+        event_type
+    );
 
-    init_schedule();
-
-    while(sim_time < simulation_time){
-        timing();
-        switch (next_event_type)
-        {
-            case EVENT_BUS_ARRIVAL_1:
-                /* code */
-                break;
-            case EVENT_BUS_ARRIVAL_2:
-                /* code */
-                break;
-            case EVENT_BUS_ARRIVAL_3:
-                /* code */
-                break;
-            case EVENT_ARRIVAL_1:
-                /* code */
-                break;
-            case EVENT_ARRIVAL_2:
-                /* code */
-                break;
-            case EVENT_ARRIVAL_3:
-                /* code */
-                break;
-            default:
-                break;
-        }
-        simulation_time++;
-        break;
+    // Fill transfer
+    transfer[RIDX_PERSON_ARRIVAL_TIME] = sim_time;
+    if (location == LOCN_CAR_RENTAL) {
+        transfer[RIDX_PERSON_DESTINATION] =
+            // return 1 or 2
+            random_integer(DESTINATION_PROBABILITIES, STRM_DESTINATION);
+    } else {
+        transfer[RIDX_PERSON_DESTINATION] = LOCN_CAR_RENTAL;
     }
 
-    return 0;
+    transfer[RIDX_PERSON_DD_TO_AIR_TERMINAL_1] = (
+        (int) transfer[RIDX_PERSON_DESTINATION] - LOCN_AIR_TERMINAL_1
+    ) % 3;
+    transfer[RIDX_PERSON_DD_TO_AIR_TERMINAL_2] = (
+        (int) transfer[RIDX_PERSON_DESTINATION] - LOCN_AIR_TERMINAL_2
+    ) % 3;
+    transfer[RIDX_PERSON_DD_TO_CAR_RENTAL] = (
+        (int) transfer[RIDX_PERSON_DESTINATION] - LOCN_CAR_RENTAL
+    ) % 3;
+
+    // FIFO, so insert last and remove first
+    list_file(LAST, LOCN_TO_LIST[location]);
+}
+
+/**
+ * Used to initialize EVNT_LOAD_BUS event.
+ * It checks whether there is a passenger that
+ * are waiting and the bus is not full.
+*/
+void safe_schedule_load_bus(int location) {
+    // if bus is not full
+    int bus_is_not_full = list_size[LIST_BUS_PASSENGER] < BUS_CAPACITY;
+    // and if there are still passengers waiting
+    int exist_more_passenger = list_size[LOCN_TO_LIST[location]] >= 1;
+    if (bus_is_not_full && exist_more_passenger) {
+        // try to load them
+        double next_load_time = sim_time 
+            + uniform(LOAD_TIME_MIN, LOAD_TIME_MAX, EVNT_TO_STRM[EVNT_BUS_LOAD]);
+        // Let that person unload first
+        if (next_load_time > BUS_NEXT_DEPARTURE_TIME) {
+            event_cancel(EVNT_BUS_DEPARTURE);
+        }
+        event_schedule(
+            next_load_time,
+            EVNT_BUS_LOAD
+        );
+    } else {
+        // Can't schedule anymore, depart
+        event_schedule(
+            sim_time,
+            EVNT_BUS_DEPARTURE
+        );
+    }
+}
+
+void load_bus(int location){
+    // Remove first passenger from location
+    list_remove(FIRST, LOCN_TO_LIST[location]);
+    // rank passenger based on distance
+    list_rank[LOCN_TO_LIST[location]] = location + DD_RIDX_OFFET;
+    list_file(INCREASING, LOCN_TO_LIST[location]);
+
+    // Try scheduling another EVNT_LOAD_BUS
+    safe_schedule_load_bus(location);
+}
+
+/**
+ * Used to initialize EVNT_UNLOAD_BUS event.
+ * It checks whether there is a passenger that
+ * have location as ther destination.
+*/
+void safe_schedule_unload_bus(int location) {
+    // If there are still passengers
+    if(list_size[LIST_BUS_PASSENGER] >= 1) {
+        // Ask that passenger about their destination
+        peek_first(LIST_BUS_PASSENGER);
+        // if that person's destination is also here
+        if (peek_transfer[RIDX_PERSON_DESTINATION] == location) {
+            double next_unload_time = sim_time 
+                + uniform(UNLOAD_TIME_MIN, UNLOAD_TIME_MAX, EVNT_TO_STRM[EVNT_BUS_UNLOAD]);
+            // Let that person unload first
+            if (next_unload_time > BUS_NEXT_DEPARTURE_TIME) {
+                event_cancel(EVNT_BUS_DEPARTURE);
+            }
+            event_schedule(
+                next_unload_time,
+                EVNT_BUS_UNLOAD
+            );
+        }
+    } else {
+        safe_schedule_load_bus(location);
+    }
+}
+
+void unload_bus(int location) {
+    // unload passenger
+    list_remove(FIRST, LIST_BUS_PASSENGER);
+    // Try scheduling more unload
+    // If not possible, schedule load
+    safe_schedule_unload_bus(location);
+}
+
+void bus_arrival() {
+    CURR_BUS_LOCN = NEXT_BUS_LOCN;
+    NEXT_BUS_LOCN = NEXT_LOCATION_FROM[CURR_BUS_LOCN];
+    event_schedule(
+        sim_time + 5 * MINUTE,
+        EVNT_BUS_DEPARTURE
+    );
+    safe_schedule_unload_bus(CURR_BUS_LOCN);
+}
+
+void bus_departure() {
+    event_schedule(
+        sim_time + TIME_TO_NEXT_LOCN_FROM[CURR_BUS_LOCN],
+        EVNT_BUS_ARRIVAL
+    );
+}
+
+int main()
+{
+    FILE_INPUT = open_file("test/input/modsim.in", "r");
+    FILE_OUTPUT = open_file("test/output/modsim.out", "w");
+    read_input(
+        FILE_INPUT,
+        MEAN_INTERARRIVAL,
+        &LOAD_TIME_MIN, &LOAD_TIME_MAX,
+        &UNLOAD_TIME_MIN, &UNLOAD_TIME_MAX,
+        DESTINATION_PROBABILITIES,
+        &TOTAL_SIMULATION_TIME);
+
+    init_simlib();
+    init_model();
+
+    while (sim_time < TOTAL_SIMULATION_TIME)
+    {
+        timing();
+        printf("Event %i\n", next_event_type);
+        switch (next_event_type)
+        {
+        case EVNT_PERSON_ARRIVAL_AIR_TERMINAL_1:
+            person_arrival_at(LOCN_AIR_TERMINAL_1, next_event_type);
+            break;
+        case EVNT_PERSON_ARRIVAL_AIR_TERMINAL_2:
+            person_arrival_at(LOCN_AIR_TERMINAL_2, next_event_type);
+            break;
+        case EVNT_PERSON_ARRIVAL_CAR_RENTAL:
+            person_arrival_at(LOCN_CAR_RENTAL, next_event_type);
+            break;
+        case EVNT_BUS_ARRIVAL:
+            bus_arrival();
+            break;
+        case EVNT_BUS_UNLOAD:
+            unload_bus(CURR_BUS_LOCN);
+            break;
+        case EVNT_BUS_LOAD:
+            load_bus(CURR_BUS_LOCN);
+            break;
+        case EVNT_BUS_DEPARTURE:
+            bus_departure();
+            break;
+        case EVNT_SIMULATION_END:
+            printf("Simulation END! Thank You\n");
+            exit(EXIT_SUCCESS);
+            break;
+        default:
+            printf("Unhandled Event Type '%i', Panicking.\n", next_event_type);
+            exit(EXIT_FAILURE);
+        }
+    }
 }
