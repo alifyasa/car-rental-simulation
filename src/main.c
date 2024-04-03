@@ -88,6 +88,7 @@ void init_model()
  * List of locations are available at main.h.
 */
 void person_arrival_at(int location, int event_type) {
+    printf("[%9.4f] PERSON ARRIVED AT LOCATION %d\n", sim_time, location);
     event_schedule(
         sim_time + expon(
             MEAN_INTERARRIVAL[location],
@@ -152,6 +153,7 @@ void safe_schedule_load_bus(int location) {
 }
 
 void load_bus(int location){
+    printf("[%9.4f] PERSON LOADED AT LOCATION %d\n", sim_time, location);
     // Remove first passenger from location
     list_remove(FIRST, LOCN_TO_LIST[location]);
     // rank passenger based on distance
@@ -191,6 +193,7 @@ void safe_schedule_unload_bus(int location) {
 }
 
 void unload_bus(int location) {
+    printf("[%9.4f] PERSON UNLOADED AT LOCATION %d\n", sim_time, location);
     // unload passenger
     list_remove(FIRST, LIST_BUS_PASSENGER);
     // Try scheduling more unload
@@ -201,6 +204,7 @@ void unload_bus(int location) {
 void bus_arrival() {
     CURR_BUS_LOCN = NEXT_BUS_LOCN;
     NEXT_BUS_LOCN = NEXT_LOCATION_FROM[CURR_BUS_LOCN];
+    printf("[%9.4f] BUS ARRIVED AT LOCATION %d\n", sim_time, CURR_BUS_LOCN);
     event_schedule(
         sim_time + 5 * MINUTE,
         EVNT_BUS_DEPARTURE
@@ -209,6 +213,7 @@ void bus_arrival() {
 }
 
 void bus_departure() {
+    printf("[%9.4f] BUS LEFT LOCATION %d\n", sim_time, CURR_BUS_LOCN);
     event_schedule(
         sim_time + TIME_TO_NEXT_LOCN_FROM[CURR_BUS_LOCN],
         EVNT_BUS_ARRIVAL
@@ -233,7 +238,6 @@ int main()
     while (sim_time < TOTAL_SIMULATION_TIME)
     {
         timing();
-        printf("Event %i\n", next_event_type);
         switch (next_event_type)
         {
         case EVNT_PERSON_ARRIVAL_AIR_TERMINAL_1:
