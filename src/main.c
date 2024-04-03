@@ -17,7 +17,7 @@ int CURR_BUS_LOCN;
 int NEXT_BUS_LOCN;
 
 double BUS_NEXT_DEPARTURE_TIME;
-double BUS_ARRIVAL_TIME;
+double BUS_ARRIVAL_TIME = -1.0;
 double BUS_LAST_DEPARTURE_FROM_CAR_RENTAL = -1;
 int BUS_NEXT_DEPARTURE_CANCELLED;
 int BUS_STOPPED;
@@ -109,7 +109,7 @@ void safe_schedule_load_bus(int location) {
         if (next_load_time > BUS_NEXT_DEPARTURE_TIME) {
             int cancelled = event_cancel(EVNT_BUS_DEPARTURE);
             if (cancelled) {
-                BUS_NEXT_DEPARTURE_CANCELLED = 1;
+                BUS_NEXT_DEPARTURE_CANCELLED = TRUE;
                 printf(
                     "[%9.4f] --- BUS DEPARTURE CANCELLED.\n", 
                     sim_time
@@ -136,7 +136,8 @@ void safe_schedule_load_bus(int location) {
             EVNT_BUS_DEPARTURE
         );
     } else if (!exist_more_passenger) {
-        BUS_ON_STANDBY = 1;
+        // bus is not full and location queue empty
+        BUS_ON_STANDBY = TRUE;
         printf(
             "[%9.4f] --- BUS ON STANDBY AT LOCATION %d. PASSENGER COUNT: %i\n", 
             sim_time, CURR_BUS_LOCN, list_size[LIST_BUS_PASSENGER]
@@ -145,7 +146,7 @@ void safe_schedule_load_bus(int location) {
 }
 
 void load_bus(int location){
-    BUS_ON_STANDBY = 0;
+    BUS_ON_STANDBY = FALSE;
     // Remove first passenger from location
     list_remove(FIRST, LOCN_TO_LIST[location]);
     // rank passenger based on distance
@@ -185,7 +186,7 @@ void safe_schedule_unload_bus(int location) {
         if (next_unload_time > BUS_NEXT_DEPARTURE_TIME) {
             int cancelled = event_cancel(EVNT_BUS_DEPARTURE);
             if (cancelled) {
-                BUS_NEXT_DEPARTURE_CANCELLED = 1;
+                BUS_NEXT_DEPARTURE_CANCELLED = TRUE;
                 printf(
                     "[%9.4f] --- BUS DEPARTURE CANCELLED.\n", 
                     sim_time
@@ -206,7 +207,7 @@ void safe_schedule_unload_bus(int location) {
 }
 
 void unload_bus(int location) {
-    BUS_ON_STANDBY = 0;
+    BUS_ON_STANDBY = FALSE;
     // unload passenger
     list_remove(FIRST, LIST_BUS_PASSENGER);
     // record total service time, passenger count
@@ -228,8 +229,8 @@ void bus_arrival() {
     BUS_ARRIVAL_TIME = sim_time;
     CURR_BUS_LOCN = NEXT_BUS_LOCN;
     NEXT_BUS_LOCN = NEXT_LOCATION_FROM[CURR_BUS_LOCN];
-    BUS_STOPPED = 1;
-    BUS_ON_STANDBY = 0;
+    BUS_STOPPED = TRUE;
+    BUS_ON_STANDBY = FALSE;
     printf(
         "[%9.4f] BUS ARRIVED AT LOCATION %d. PASSENGER COUNT: %d. WAITING LINE: %d\n", 
         sim_time, CURR_BUS_LOCN, list_size[LIST_BUS_PASSENGER], list_size[LOCN_TO_LIST[CURR_BUS_LOCN]]
@@ -240,7 +241,7 @@ void bus_arrival() {
         EVNT_BUS_DEPARTURE
     );
     BUS_NEXT_DEPARTURE_TIME = sim_time + 5 * MINUTE;
-    BUS_NEXT_DEPARTURE_CANCELLED = 0;
+    BUS_NEXT_DEPARTURE_CANCELLED = FALSE;
 
     safe_schedule_unload_bus(CURR_BUS_LOCN);
 }
@@ -260,8 +261,8 @@ void bus_departure() {
         BUS_LAST_DEPARTURE_FROM_CAR_RENTAL = sim_time;
     }
 
-    BUS_STOPPED = 0;
-    BUS_ON_STANDBY = 0;
+    BUS_STOPPED = FALSE;
+    BUS_ON_STANDBY = FALSE;
     // not in any location
     event_schedule(
         sim_time + TIME_TO_NEXT_LOCN_FROM[CURR_BUS_LOCN],
@@ -302,6 +303,7 @@ void person_arrival_at(int location, int event_type) {
     transfer[RIDX_PERSON_DD_FROM_CAR_RENTAL] = (
         (int) transfer[RIDX_PERSON_DESTINATION] - LOCN_CAR_RENTAL
     ) % 3;
+
     transfer[RIDX_PERSON_ARRIVAL_LOCN] = location;
 
     // FIFO, so insert last and remove first
