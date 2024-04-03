@@ -48,7 +48,7 @@ void read_input(
         total_simulation_time
     );
 
-    printf("All Unit of Time is in seconds\n");
+    printf("All Unit of Time is in minutes\n");
     printf("Mean Interarrival Times\t\t: %lf, %lf, %lf\n",
         mean_interarrival[LOCN_AIR_TERMINAL_1], 
         mean_interarrival[LOCN_AIR_TERMINAL_2], 
