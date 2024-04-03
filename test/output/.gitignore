@@ -1,2 +1,4 @@
 *
 !.gitignore
+!modsim.log
+!modsim.out
