@@ -36,10 +36,12 @@ void record_passenger_count() {
 }
 
 void record_bus_stop_time(double arrival_time, int location) {
-    sampst(
-        sim_time - arrival_time,
-        BUS_STOP_TIME_RCRD_OFFSET + location
-    );
+    if (arrival_time != -1) {
+        sampst(
+            sim_time - arrival_time,
+            BUS_STOP_TIME_RCRD_OFFSET + location
+        );
+    }
 }
 
 void record_loop_time(double last_departure_time) {
