@@ -17,6 +17,8 @@ int CURR_BUS_LOCN;
 int NEXT_BUS_LOCN;
 
 double BUS_NEXT_DEPARTURE_TIME;
+double BUS_ARRIVAL_TIME;
+double BUS_LAST_DEPARTURE_FROM_CAR_RENTAL = -1;
 int BUS_NEXT_DEPARTURE_CANCELLED;
 int BUS_STOPPED;
 int BUS_ON_STANDBY;
@@ -52,8 +54,10 @@ int NEXT_LOCATION_FROM[] = {
 
 void init_model()
 {
-    // Simulation end at max double time
-    event_schedule(__DBL_MAX__, EVNT_SIMULATION_END);
+    init_record();
+
+    // Simulation end at total simulation time
+    event_schedule(TOTAL_SIMULATION_TIME, EVNT_SIMULATION_END);
 
     /**
      * From the problem:
@@ -135,9 +139,15 @@ void load_bus(int location){
     BUS_ON_STANDBY = 0;
     // Remove first passenger from location
     list_remove(FIRST, LOCN_TO_LIST[location]);
+    // record waiting time
+    record_delay(transfer[RIDX_PERSON_ARRIVAL_TIME], location);
     // rank passenger based on distance
     list_rank[LIST_BUS_PASSENGER] = location + DD_RIDX_OFFET;
     list_file(INCREASING, LIST_BUS_PASSENGER);
+    // record queue length and passenger num
+    record_queue_length();
+    record_passenger_count();
+
     printf(
         "[%9.4f] PERSON LOADED AT LOCATION %d. PASSENGER COUNT: %i\n", 
         sim_time, location, list_size[LIST_BUS_PASSENGER]
@@ -145,6 +155,7 @@ void load_bus(int location){
 
     // Try scheduling another EVNT_LOAD_BUS
     safe_schedule_load_bus(location);
+
 }
 
 /**
@@ -191,6 +202,12 @@ void unload_bus(int location) {
     BUS_ON_STANDBY = 0;
     // unload passenger
     list_remove(FIRST, LIST_BUS_PASSENGER);
+    // record total service time, passenger count
+    record_person_total_time(
+        transfer[RIDX_PERSON_ARRIVAL_TIME],
+        transfer[RIDX_PERSON_DESTINATION]
+    );
+    record_passenger_count();
     printf(
         "[%9.4f] PERSON UNLOADED AT LOCATION %d. PASSENGER COUNT: %i\n", 
         sim_time, location, list_size[LIST_BUS_PASSENGER]
@@ -201,6 +218,7 @@ void unload_bus(int location) {
 }
 
 void bus_arrival() {
+    BUS_ARRIVAL_TIME = sim_time;
     CURR_BUS_LOCN = NEXT_BUS_LOCN;
     NEXT_BUS_LOCN = NEXT_LOCATION_FROM[CURR_BUS_LOCN];
     BUS_STOPPED = 1;
@@ -225,6 +243,16 @@ void bus_departure() {
         "[%9.4f] BUS LEFT LOCATION %d. NEXT ARRIVAL: (+%9.4f)\n", 
         sim_time, CURR_BUS_LOCN, TIME_TO_NEXT_LOCN_FROM[CURR_BUS_LOCN]
     );
+    record_bus_stop_time(BUS_ARRIVAL_TIME);
+    if (CURR_BUS_LOCN == LOCN_CAR_RENTAL){
+        if (BUS_LAST_DEPARTURE_FROM_CAR_RENTAL != -1) {
+            record_loop_time(
+                BUS_LAST_DEPARTURE_FROM_CAR_RENTAL
+            );
+        }
+        BUS_LAST_DEPARTURE_FROM_CAR_RENTAL = sim_time;
+    }
+
     BUS_STOPPED = 0;
     BUS_ON_STANDBY = 0;
     // not in any location
@@ -325,11 +353,15 @@ int main()
             bus_departure();
             break;
         case EVNT_SIMULATION_END:
-            printf("Simulation END! Thank You\n");
+            printf("[%9.4f] SIMULATION END! THANK YOU\n", sim_time);
+            report(FILE_OUTPUT);
             exit(EXIT_SUCCESS);
             break;
         default:
-            printf("Unhandled Event Type '%i', Panicking.\n", next_event_type);
+            printf(
+                "[%9.4f] Unhandled Event Type '%i', Panicking.\n", 
+                sim_time, next_event_type
+            );
             exit(EXIT_FAILURE);
         }
     }
