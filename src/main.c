@@ -105,7 +105,7 @@ void safe_schedule_load_bus(int location) {
         // try to load them
         double next_load_time = sim_time 
             + uniform(LOAD_TIME_MIN, LOAD_TIME_MAX, EVNT_TO_STRM[EVNT_BUS_LOAD]);
-        // Let that person unload first
+        // Let that person load first
         if (next_load_time > BUS_NEXT_DEPARTURE_TIME) {
             int cancelled = event_cancel(EVNT_BUS_DEPARTURE);
             if (cancelled) {
@@ -116,10 +116,19 @@ void safe_schedule_load_bus(int location) {
                 );
             }
         }
+        // start loading that person
         event_schedule(
             next_load_time,
             EVNT_BUS_LOAD
         );
+        // Peek at that person's arrival time
+        peek_first(LOCN_TO_LIST[location]);
+        // record as serviced
+        record_delay(
+            peek_transfer[RIDX_PERSON_ARRIVAL_TIME],
+            location
+        );
+
     } else if (BUS_NEXT_DEPARTURE_CANCELLED) {
         // If we cancel it, reschedule
         event_schedule(
@@ -129,7 +138,7 @@ void safe_schedule_load_bus(int location) {
     } else if (!exist_more_passenger) {
         BUS_ON_STANDBY = 1;
         printf(
-            "[%9.4f] BUS ON STANDBY AT LOCATION %d. PASSENGER COUNT: %i\n", 
+            "[%9.4f] --- BUS ON STANDBY AT LOCATION %d. PASSENGER COUNT: %i\n", 
             sim_time, CURR_BUS_LOCN, list_size[LIST_BUS_PASSENGER]
         );
     }
@@ -139,8 +148,6 @@ void load_bus(int location){
     BUS_ON_STANDBY = 0;
     // Remove first passenger from location
     list_remove(FIRST, LOCN_TO_LIST[location]);
-    // record waiting time
-    record_delay(transfer[RIDX_PERSON_ARRIVAL_TIME], location);
     // rank passenger based on distance
     list_rank[LIST_BUS_PASSENGER] = location + DD_RIDX_OFFET;
     list_file(INCREASING, LIST_BUS_PASSENGER);
@@ -243,7 +250,7 @@ void bus_departure() {
         "[%9.4f] BUS LEFT LOCATION %d. NEXT ARRIVAL: (+%9.4f)\n", 
         sim_time, CURR_BUS_LOCN, TIME_TO_NEXT_LOCN_FROM[CURR_BUS_LOCN]
     );
-    record_bus_stop_time(BUS_ARRIVAL_TIME);
+    record_bus_stop_time(BUS_ARRIVAL_TIME, CURR_BUS_LOCN);
     if (CURR_BUS_LOCN == LOCN_CAR_RENTAL){
         if (BUS_LAST_DEPARTURE_FROM_CAR_RENTAL != -1) {
             record_loop_time(

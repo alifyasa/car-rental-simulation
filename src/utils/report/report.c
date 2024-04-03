@@ -35,10 +35,10 @@ void record_passenger_count() {
     );
 }
 
-void record_bus_stop_time(double arrival_time) {
+void record_bus_stop_time(double arrival_time, int location) {
     sampst(
         sim_time - arrival_time,
-        RCRD_BUS_STOP_TIME
+        BUS_STOP_TIME_RCRD_OFFSET + location
     );
 }
 
@@ -99,8 +99,8 @@ void report(FILE* output_file) {
     );
     out_sampst(
         output_file,
-        RCRD_BUS_STOP_TIME,
-        RCRD_BUS_STOP_TIME
+        RCRD_BUS_STOP_TIME_AIR_TERMINAL_1,
+        RCRD_BUS_STOP_TIME_CAR_RENTAL
     );
 
     fprintf(
