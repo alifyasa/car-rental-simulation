@@ -205,7 +205,7 @@ void unload_bus(int location) {
     // record total service time, passenger count
     record_person_total_time(
         transfer[RIDX_PERSON_ARRIVAL_TIME],
-        transfer[RIDX_PERSON_DESTINATION]
+        transfer[RIDX_PERSON_ARRIVAL_LOCN]
     );
     record_passenger_count();
     printf(
@@ -295,6 +295,7 @@ void person_arrival_at(int location, int event_type) {
     transfer[RIDX_PERSON_DD_FROM_CAR_RENTAL] = (
         (int) transfer[RIDX_PERSON_DESTINATION] - LOCN_CAR_RENTAL
     ) % 3;
+    transfer[RIDX_PERSON_ARRIVAL_LOCN] = location;
 
     // FIFO, so insert last and remove first
     list_file(LAST, LOCN_TO_LIST[location]);
