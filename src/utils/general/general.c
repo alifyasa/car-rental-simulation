@@ -62,7 +62,7 @@ void read_input(
     printf("Unload Time Max\t\t\t: %lf\n", *unload_time_max);
     
     printf("Destination Probabilities\t: %lf, %lf\n",
-           dest_prob[1], dest_prob[2]);
+           dest_prob[1], dest_prob[2] - dest_prob[1]);
            
     printf("Simulation Time\t\t\t: %d\n", *total_simulation_time);
 }
