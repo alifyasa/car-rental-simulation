@@ -39,9 +39,9 @@ int LOCN_TO_LIST[] = {
 };
 double TIME_TO_NEXT_LOCN_FROM[] = {
     -1.0,
-    1 / 30 * HOUR, // convert to minute
-    (0.5 + 3 + 1) / 30 * HOUR,
-    (1 + 3 + 0.5) / 30 * HOUR,
+    1.0 / 30.0 * HOUR, // convert to minute
+    (0.5 + 3.0 + 1.0) / 30.0 * HOUR,
+    (1.0 + 3.0 + 0.5) / 30.0 * HOUR,
 };
 int NEXT_LOCATION_FROM[] = {
     -1,
@@ -122,11 +122,11 @@ void safe_schedule_load_bus(int location) {
             sim_time,
             EVNT_BUS_DEPARTURE
         );
-    } else {
+    } else if (!exist_more_passenger) {
         BUS_ON_STANDBY = 1;
         printf(
             "[%9.4f] BUS ON STANDBY AT LOCATION %d. PASSENGER COUNT: %i\n", 
-            sim_time, location, list_size[LIST_BUS_PASSENGER]
+            sim_time, CURR_BUS_LOCN, list_size[LIST_BUS_PASSENGER]
         );
     }
 }
@@ -204,7 +204,7 @@ void bus_arrival() {
     CURR_BUS_LOCN = NEXT_BUS_LOCN;
     NEXT_BUS_LOCN = NEXT_LOCATION_FROM[CURR_BUS_LOCN];
     BUS_STOPPED = 1;
-    BUS_ON_STANDBY = 1;
+    BUS_ON_STANDBY = 0;
     printf(
         "[%9.4f] BUS ARRIVED AT LOCATION %d. PASSENGER COUNT: %d. WAITING LINE: %d\n", 
         sim_time, CURR_BUS_LOCN, list_size[LIST_BUS_PASSENGER], list_size[LOCN_TO_LIST[CURR_BUS_LOCN]]
@@ -221,8 +221,12 @@ void bus_arrival() {
 }
 
 void bus_departure() {
-    printf("[%9.4f] BUS LEFT LOCATION %d\n", sim_time, CURR_BUS_LOCN);
+    printf(
+        "[%9.4f] BUS LEFT LOCATION %d. NEXT ARRIVAL: (+%9.4f)\n", 
+        sim_time, CURR_BUS_LOCN, TIME_TO_NEXT_LOCN_FROM[CURR_BUS_LOCN]
+    );
     BUS_STOPPED = 0;
+    BUS_ON_STANDBY = 0;
     // not in any location
     event_schedule(
         sim_time + TIME_TO_NEXT_LOCN_FROM[CURR_BUS_LOCN],
@@ -272,7 +276,8 @@ void person_arrival_at(int location, int event_type) {
         sim_time, location, list_size[location]
     );
 
-    if (BUS_ON_STANDBY) {
+    int bus_is_here = location == CURR_BUS_LOCN;
+    if (bus_is_here && BUS_STOPPED && BUS_ON_STANDBY) {
         safe_schedule_load_bus(location);
     }
 }
