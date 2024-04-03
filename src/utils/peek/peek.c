@@ -8,8 +8,10 @@ void init_peek(){
 }
 
 void peek_first(int list){
-    peek_row = head[list];
-    free ((char *) peek_transfer);
-    peek_transfer = (*peek_row).value;
-    free ((char *) peek_row);
+    if(list_size[list] >= 1) {
+        peek_row = head[list];
+        peek_transfer = (*peek_row).value;
+    } else {
+        init_peek();
+    }
 }
