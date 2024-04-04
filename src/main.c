@@ -269,6 +269,8 @@ void bus_arrival() {
     safe_schedule_unload_bus(CURR_BUS_LOCN);
 }
 
+// Add event for bus departure condition
+// Assign all bus departure detail such as bus last departure from car rental time, current bus location, next bus destination, bus stop condition, bus standby condition
 void bus_departure() {
     printf(
         "[%9.4f] BUS LEFT LOCATION %d. NEXT ARRIVAL: (+%9.4f)\n", 
@@ -276,13 +278,13 @@ void bus_departure() {
     );
     // Record stop and loop time
     record_bus_stop_time(BUS_ARRIVAL_TIME, CURR_BUS_LOCN);
-    if (CURR_BUS_LOCN == LOCN_CAR_RENTAL){
-        if (BUS_LAST_DEPARTURE_FROM_CAR_RENTAL != -1) {
-            record_loop_time(
+    if (CURR_BUS_LOCN == LOCN_CAR_RENTAL){ // if current bus location is in location car rental
+        if (BUS_LAST_DEPARTURE_FROM_CAR_RENTAL != -1) { // Check if bus last departure from car rental
+            record_loop_time( // do record last_departure_time from car rental
                 BUS_LAST_DEPARTURE_FROM_CAR_RENTAL
             );
         }
-        BUS_LAST_DEPARTURE_FROM_CAR_RENTAL = sim_time;
+        BUS_LAST_DEPARTURE_FROM_CAR_RENTAL = sim_time; // assign last departure from car rental time by this sim time to store current bus departure time
     }
 
     BUS_STOPPED = FALSE;
