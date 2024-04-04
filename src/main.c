@@ -33,18 +33,21 @@ int EVNT_TO_STRM[] = {
     STRM_BUS_UNLOAD,
     STRM_BUS_LOAD
 };
+// Map location to list index
 int LOCN_TO_LIST[] = {
     -1,
     LIST_AIR_TERMINAL_1,
     LIST_AIR_TERMINAL_2,
     LIST_CAR_RENTAL
 };
+// time to next location for each location
 double TIME_TO_NEXT_LOCN_FROM[] = {
     -1.0,
     1.0 / 30.0 * HOUR, // convert to minute
     (0.5 + 3.0 + 1.0) / 30.0 * HOUR,
     (1.0 + 3.0 + 0.5) / 30.0 * HOUR,
 };
+
 int NEXT_LOCATION_FROM[] = {
     -1,
     LOCN_AIR_TERMINAL_2,
@@ -54,6 +57,7 @@ int NEXT_LOCATION_FROM[] = {
 
 void init_model()
 {
+    // Initialize record utility
     init_record();
 
     // Simulation end at total simulation time
@@ -133,6 +137,9 @@ void safe_schedule_load_bus(int location) {
         );
 
     } else if (BUS_NEXT_DEPARTURE_CANCELLED) {
+        // From the problem, the bus has to wait for at least 5 min
+        // even when the bus is full before 5 min.
+
         // If we cancel it, reschedule
         event_schedule(
             sim_time,
@@ -153,7 +160,7 @@ void load_bus(int location){
     // Remove first passenger from location
     list_remove(FIRST, LOCN_TO_LIST[location]);
     // rank passenger based on distance
-    list_rank[LIST_BUS_PASSENGER] = location + DD_RIDX_OFFET;
+    list_rank[LIST_BUS_PASSENGER] = location + DD_RIDX_OFFSET;
     list_file(INCREASING, LIST_BUS_PASSENGER);
     // record queue length and passenger num
     record_queue_length();
@@ -184,9 +191,10 @@ void safe_schedule_unload_bus(int location) {
     // if that person's destination is also here
     int first_passenger_dest_here = peek_transfer[RIDX_PERSON_DESTINATION] == location;
     if(bus_is_not_empty && first_passenger_dest_here) {
+        // see how long they unload
         double next_unload_time = sim_time 
             + uniform(UNLOAD_TIME_MIN, UNLOAD_TIME_MAX, EVNT_TO_STRM[EVNT_BUS_UNLOAD]);
-        // Let that person unload first
+        // if it's longer than departure, let them unload first
         if (next_unload_time > BUS_NEXT_DEPARTURE_TIME) {
             int cancelled = event_cancel(EVNT_BUS_DEPARTURE);
             if (cancelled) {
@@ -210,6 +218,14 @@ void safe_schedule_unload_bus(int location) {
     }
 }
 
+/**
+ * An unload event means a person leaving the bus.
+ * 
+ * A person first has to be in the bus, then
+ * wait for some delay, then leave the bus.
+ * 
+ * This function handles just leaving the bus.
+ */
 void unload_bus(int location) {
     BUS_ON_STANDBY = FALSE;
     // unload passenger
@@ -247,6 +263,7 @@ void bus_arrival() {
     BUS_NEXT_DEPARTURE_TIME = sim_time + 5 * MINUTE;
     BUS_NEXT_DEPARTURE_CANCELLED = FALSE;
 
+    // try to schedule a load
     safe_schedule_unload_bus(CURR_BUS_LOCN);
 }
 
@@ -255,6 +272,7 @@ void bus_departure() {
         "[%9.4f] BUS LEFT LOCATION %d. NEXT ARRIVAL: (+%9.4f)\n", 
         sim_time, CURR_BUS_LOCN, TIME_TO_NEXT_LOCN_FROM[CURR_BUS_LOCN]
     );
+    // Record stop and loop time
     record_bus_stop_time(BUS_ARRIVAL_TIME, CURR_BUS_LOCN);
     if (CURR_BUS_LOCN == LOCN_CAR_RENTAL){
         if (BUS_LAST_DEPARTURE_FROM_CAR_RENTAL != -1) {
@@ -267,7 +285,7 @@ void bus_departure() {
 
     BUS_STOPPED = FALSE;
     BUS_ON_STANDBY = FALSE;
-    // not in any location
+
     event_schedule(
         sim_time + TIME_TO_NEXT_LOCN_FROM[CURR_BUS_LOCN],
         EVNT_BUS_ARRIVAL
@@ -282,6 +300,7 @@ void bus_departure() {
 void person_arrival_at(int location, int event_type) {
 
     // Init person arrival event in specific location and event type
+    // Schedule next arrival
     event_schedule(
         sim_time + expon(
             MEAN_INTERARRIVAL[location],
