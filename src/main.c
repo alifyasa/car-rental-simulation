@@ -245,6 +245,8 @@ void unload_bus(int location) {
     safe_schedule_unload_bus(location);
 }
 
+// Add event for bus arrival condition
+// Assign all arrival detail such as bus arrival time, current bus location, next bus destination, bus stop condition, bus standby condition
 void bus_arrival() {
     BUS_ARRIVAL_TIME = sim_time;
     CURR_BUS_LOCN = NEXT_BUS_LOCN;
