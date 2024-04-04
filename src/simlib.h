@@ -1,3 +1,6 @@
+// Supported by GCC to solve multiple definition problem
+#pragma once
+
 /* This is simlib.h. */
 
 /* Include files. */
