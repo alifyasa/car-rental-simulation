@@ -279,7 +279,7 @@ void bus_departure() {
     // Record stop and loop time
     record_bus_stop_time(BUS_ARRIVAL_TIME, CURR_BUS_LOCN);
     if (CURR_BUS_LOCN == LOCN_CAR_RENTAL){ // if current bus location is in location car rental
-        if (BUS_LAST_DEPARTURE_FROM_CAR_RENTAL != -1) { // Check if bus last departure from car rental
+        if (BUS_LAST_DEPARTURE_FROM_CAR_RENTAL != -1) { // Check if bus last departure from car rental is in default val (no move)
             record_loop_time( // do record last_departure_time from car rental
                 BUS_LAST_DEPARTURE_FROM_CAR_RENTAL
             );
