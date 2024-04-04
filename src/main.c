@@ -157,6 +157,7 @@ void load_bus(int location){
     list_file(INCREASING, LIST_BUS_PASSENGER);
     // record queue length and passenger num
     record_queue_length();
+    // Record passenger length of each terminal location
     record_passenger_count();
 
     printf(
@@ -279,6 +280,8 @@ void bus_departure() {
  * List of locations are available at main.h.
 */
 void person_arrival_at(int location, int event_type) {
+
+    // Init person arrival event in specific location and event type
     event_schedule(
         sim_time + expon(
             MEAN_INTERARRIVAL[location],
@@ -296,7 +299,7 @@ void person_arrival_at(int location, int event_type) {
     } else {
         transfer[RIDX_PERSON_DESTINATION] = LOCN_CAR_RENTAL;
     }
-
+    // Do transfer Record index of destination distance from each terminal
     transfer[RIDX_PERSON_DD_FROM_AIR_TERMINAL_1] = (
         (int) transfer[RIDX_PERSON_DESTINATION] - LOCN_AIR_TERMINAL_1
     ) % 3;
@@ -317,6 +320,7 @@ void person_arrival_at(int location, int event_type) {
         sim_time, location, list_size[location]
     );
 
+    // Cbeck bus is in location or not, if yes safe the schedule load bus
     int bus_is_here = location == CURR_BUS_LOCN;
     if (bus_is_here && BUS_STOPPED && BUS_ON_STANDBY) {
         safe_schedule_load_bus(location);
