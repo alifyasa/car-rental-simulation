@@ -292,13 +292,8 @@ void person_arrival_at(int location, int event_type) {
 
     // Fill transfer
     transfer[RIDX_PERSON_ARRIVAL_TIME] = sim_time;
-    if (location == LOCN_CAR_RENTAL) {
-        transfer[RIDX_PERSON_DESTINATION] =
-            // return 1 or 2
-            random_integer(DESTINATION_PROBABILITIES, STRM_DESTINATION);
-    } else {
-        transfer[RIDX_PERSON_DESTINATION] = LOCN_CAR_RENTAL;
-    }
+    transfer[RIDX_PERSON_DESTINATION] = (location == LOCN_CAR_RENTAL) ? random_integer(DESTINATION_PROBABILITIES, STRM_DESTINATION) : LOCN_CAR_RENTAL;
+
     // Do transfer Record index of destination distance from each terminal
     transfer[RIDX_PERSON_DD_FROM_AIR_TERMINAL_1] = (
         (int) transfer[RIDX_PERSON_DESTINATION] - LOCN_AIR_TERMINAL_1
