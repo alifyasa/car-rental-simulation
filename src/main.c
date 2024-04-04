@@ -69,18 +69,21 @@ void init_model()
     event_schedule(sim_time, EVNT_BUS_DEPARTURE);
 
     // Initialize people arrival
+    // Ini people arrival event at terminal 1
     event_schedule(
         sim_time + expon(
             MEAN_INTERARRIVAL[LOCN_AIR_TERMINAL_1], 
             EVNT_TO_STRM[EVNT_PERSON_ARRIVAL_AIR_TERMINAL_1]
         ),
         EVNT_PERSON_ARRIVAL_AIR_TERMINAL_1);
+    // Ini people arrival event at terminal 2
     event_schedule(
         sim_time + expon(
             MEAN_INTERARRIVAL[LOCN_AIR_TERMINAL_2], 
             EVNT_TO_STRM[EVNT_PERSON_ARRIVAL_AIR_TERMINAL_2]
         ),
         EVNT_PERSON_ARRIVAL_AIR_TERMINAL_2);
+    // Ini people arrival event at terminal 3
     event_schedule(
         sim_time + expon(
             MEAN_INTERARRIVAL[LOCN_CAR_RENTAL], 
